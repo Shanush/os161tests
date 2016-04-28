@@ -73,6 +73,8 @@ write()
 - null buffer
 - invalid fd pointer
 
+close file
+
 */
 	fd = open("test.file", O_WRONLY | O_CREAT );
 	if (fd < 0) {
@@ -104,15 +106,22 @@ write()
         r = write(23, teststr, strlen(teststr));
         assert(r == -1);
         
+    
+        close(fd);
 
-        
         /*
 
-close file
 
 open same file with write (and O_EXCL)
 - get error
+*/
 
+       fd = open("test.file", O_WRONLY | O_EXCL);
+       assert(fd == -1);
+       assert(errno == EEXIST);
+
+
+        /*
 close file
 
 open file with append
