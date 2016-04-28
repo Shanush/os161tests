@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <err.h>
 #include <errno.h>
-
+#include <fcntl.h>
 #include <assert.h>
 
 #define MAX_BUF 500
@@ -17,7 +17,6 @@ int
 main(int argc, char * argv[])
 {
 	/* Notes:
-         * Do not print to the console (ever!) Except:
          *   1. A test needs to be done by the eye. If so print what it is expected before, doing the test.
          *   2. An error has occurred. It should exit(1) after the test failed.
          *   3. ALL test are done.
@@ -37,12 +36,14 @@ main(int argc, char * argv[])
         /* Planning
          * Write to the stdout, stderr - we should see output on the screen
          */
-	printf("\n**********\n* File Tester\n");
+	printf("------**** File Tester ****--------\n");
 
+        printf("----------- Testing stdout ------------\n");
         printf("\nTEST BY EYE: should say ... \"Output to stdout\"\n");
 	snprintf(buf, MAX_BUF, "Output to stdout\n");
 	r = write(1, buf, strlen(buf));
         assert(r == 17 && strerror(errno));
+        printf("Passed\n----------- Testing stderr -------------\n");
         printf("\nTEST BY EYE: should say ... \"Output to stderr\"\n");
 	snprintf(buf, MAX_BUF, "Output to stderr\n");
 	r = write(2, buf, strlen(buf));
@@ -55,12 +56,14 @@ Checking errors:
 - open non-existent file (without O_CREAT)
 - EFAULT - filename was a bad pointer - give NULL to open's filename argument.
 */
+        printf("Passed\n----------- Opening file that doesn't exist with write -------------\n");
 
-        fd = open("test.file", O_WRONLY);
+        fd = open("test.file", O_WRONLY, 0666);
         assert(fd == -1);
         assert(errno == ENOENT && strerror(errno));
 
-        fd = open(NULL, O_RDONLY);
+        printf("Passed\n----------- Opening with filename = NULL -------------\n");
+        fd = open(NULL, O_RDONLY, 0666);
         assert(fd == -1);
         assert(errno == EFAULT && strerror(errno) );
 
@@ -76,37 +79,29 @@ write()
 close file
 
 */
-	fd = open("test.file", O_WRONLY | O_CREAT );
+        printf("Passed\n----------- Opening file -------------\n");
+        
+	fd = open("test.file", O_WRONLY | O_CREAT, 0666);
 	if (fd < 0) {
 		printf("ERROR opening file: %s\n", strerror(errno));
 		exit(1);
 	}
 
+        printf("Passed\n----------- Writing to the file -------------\n"); 
 	r = write(fd, teststr, strlen(teststr));
 	assert(r == (int)strlen(teststr) && strerror(errno));
-	if (r < 0) {
-		printf("ERROR writing file: %s\n", strerror(errno));
-		exit(1);
-	}
 
+        printf("Passed\n----------- Writing to the file with zero buffer length -------------\n"); 
 	// Zero buffer length
         r = write(fd, teststr, 0);
 	assert(r == 0 && strerror(errno));
-        if (r < 0) {
-		printf("ERROR writing file: %s\n", strerror(errno));
-		exit(1);
-	}
 
-        // NULL buffer
-        r = write(fd, NULL, strlen(teststr));
-        assert(r == -1);  
-        assert(errno == EFAULT && strerror(errno));
-
+        printf("Passed\n----------- Writing to a file with invalid fd -------------\n"); 
         // invalid fd pointer
         r = write(23, teststr, strlen(teststr));
         assert(r == -1);
         
-    
+        printf("Passed\n----------- Closing file-------------\n"); 
         close(fd);
 
         /*
@@ -116,32 +111,93 @@ open same file with write (and O_EXCL)
 - get error
 */
 
-       fd = open("test.file", O_WRONLY | O_EXCL);
-       assert(fd == -1);
-       assert(errno == EEXIST);
-
+       
+        printf("Passed?\n----------- Opening exisiting file with 0_EXCL flag -------------\n"); 
+        fd = open("test.file", O_WRONLY | O_CREAT | O_EXCL, 0666);
+        assert(fd == -1);
+        assert(errno == EEXIST);
 
         /*
-close file
-
 open file with append
 - add to the file and see if the whole thing is there.
 
 close
+*/
 
+        printf("Passed\n----------- Appending to test file-------------\n"); 
+        fd = open("test.file", O_WRONLY | O_APPEND, 0666);
+        assert(fd != -1 && strerror(errno));
+        r = write(fd, "HELLO", 5);  
+        assert(r == 5);
+
+        printf("Still checking\n----------- reading test file-------------\n");         
+        int fd2 = open("test.file", O_RDONLY, 0666); 
+	i = 0;
+	do  {
+		r = read(fd2, &buf[i], MAX_BUF - i);
+		i += r;
+	} while (i < MAX_BUF && r > 0);
+
+	if (r < 0) {
+		printf("ERROR reading file: %s\n", strerror(errno));
+		exit(1);
+	}
+	k = j = 0;
+        char *check_string = "The quick brown fox jumped over the lazy dog.HELLO"; 
+	r = strlen(check_string);
+        do {
+                if (buf[k] != check_string[j]) {
+			printf("ERROR  file contents mismatch\n");
+			exit(1);
+		}
+		k++;
+		j = k % r;
+	} while (k < i);
+        
+        
+        /*
 open with read
 read()
 - write to it and fail
-- same as given test.
 - null buffer, zero buffer length, invalid fd pointer
 
 close
+*/
 
+        printf("Passed read and append\n----------- writing to a file when opened with read -------------\n");         
+        r = write(fd2, teststr, strlen(teststr));
+        assert(r == -1);
+        assert(errno == EBADF && strerror(errno));
+           
+        /*
 open same file with write, create, trunc
 - all writing above should be gone
 - replace with new text
 
 close
+
+*/
+        close(fd); 
+        
+        printf("Passed\n----------- writing and truncate -------------\n");         
+        
+        fd = open("test.file", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	if (fd < 0) {
+		printf("ERROR opening file: %s\n", strerror(errno));
+		exit(1);
+	}
+
+        r = write(fd, "HEE", 3);
+        assert(r == 3 && strerror(errno));
+       
+        printf("\n----------- writing and truncate -------------\n");         
+        close(fd2);
+        fd2 = open("test.file", O_RDWR, 0666);
+        assert(fd2 != -1);
+        r = write(fd2, "YOOK", 4);
+        
+            
+        /*
 
 open a file read & write
 - be able to seek, read, write new stuff from beginish, read again.
@@ -172,40 +228,6 @@ write to stderr for same above test
 Maybe in a separate program:
 opening OPEN_MAX number of files, OPEN_MAX + 1 should fail. (EMFILE)*
    */
-
-	printf("\n**********\n* File Tester\n");
-
-	snprintf(buf, MAX_BUF, "**********\n* write() works for stdout\n");
-	write(1, buf, strlen(buf));
-	snprintf(buf, MAX_BUF, "**********\n* write() works for stderr\n");
-	write(2, buf, strlen(buf));
-
-	printf("**********\n* opening new file \"test.file\"\n");
-	fd = open("test.file", O_RDWR | O_CREAT );
-	printf("* open() got fd %d\n", fd);
-	if (fd < 0) {
-		printf("ERROR opening file: %s\n", strerror(errno));
-		exit(1);
-	}
-
-	printf("* writing test string\n");
-	r = write(fd, teststr, strlen(teststr));
-	printf("* wrote %d bytes\n", r);
-	if (r < 0) {
-		printf("ERROR writing file: %s\n", strerror(errno));
-		exit(1);
-	}
-
-	printf("* writing test string again\n");
-	r = write(fd, teststr, strlen(teststr));
-	printf("* wrote %d bytes\n", r);
-	if (r < 0) {
-		printf("ERROR writing file: %s\n", strerror(errno));
-		exit(1);
-	}
-	printf("* closing file\n");
-	close(fd);
-
 	printf("**********\n* opening old file \"test.file\"\n");
 	fd = open("test.file", O_RDONLY);
 	printf("* open() got fd %d\n", fd);
@@ -292,6 +314,16 @@ opening OPEN_MAX number of files, OPEN_MAX + 1 should fail. (EMFILE)*
 
 
 	close(fd);
+
+
+
+        printf("Passed\n----------- Writing to the file with NULL buffer -------------\n"); 
+        // NULL buffer
+        r = write(fd, NULL, strlen(teststr));
+        assert(r == -1);  
+        assert(errno == EFAULT && strerror(errno));
+        
+        // CHECK IF test.file is full of NULLs        
 
 	return 0;
 }
