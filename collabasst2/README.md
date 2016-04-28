@@ -9,3 +9,8 @@ This is the folder for the assignment 2 test, called collabasst2. It test the st
 * The code contains planning of what to test. Planning was done on the basis of Edwin and Shanush's code. Testcases may not have been covered. So please add more.
 * Make sure to delete test.file in your root folder before starting the test
 
+### How to use:
+Make a folder in userland/testbin/ called collabasst2
+In that folder, copy the files (collabasst2.c, Makefile) in this git to the new folder. Consider hardlinking.
+Added collabasst2 to the Makefile of userland/tesbin/Makefile
+

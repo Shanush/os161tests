@@ -103,6 +103,9 @@ write()
         // invalid fd pointer
         r = write(23, teststr, strlen(teststr));
         assert(r == -1);
+        
+
+        
         /*
 
 close file
