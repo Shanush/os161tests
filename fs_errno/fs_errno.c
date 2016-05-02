@@ -67,7 +67,7 @@ void test_open(void) {
     close(fd);
 
     printf("open: ENODEV test........");
-    fd = open("kern:", O_RDONLY | O_CREAT); 
+    fd = open("kern:", O_RDONLY | O_CREAT);
     check_test(fd, ENODEV);
 
 	printf("open: ENOENT test........");
@@ -96,7 +96,7 @@ void test_open(void) {
 
 	printf("open: EMFILE test........");
     int fda[__OPEN_MAX - 3];
-    for (int i = 0; i < __OPEN_MAX - 3; i++) {
+    for (int i = 0; i < __OPEN_MAX - 2; i++) {
         fda[i] = open("fs_errno.txt", O_RDONLY);
         if (fda[i] == -1) {
             printf("   failed %d open %dth file\n", errno, i);
@@ -114,7 +114,7 @@ void test_close(void) {
 	printf("close: EBADF test........");
     for (int i = 3; i < __OPEN_MAX; i++) {
         fd = close(i);
-        if (fd == -1) { 
+        if (fd == -1) {
             printf("   failed %d close %dth file\n", errno, i);
             break;
         }
@@ -127,13 +127,13 @@ void test_close(void) {
     check_test(fd, EBADF);
 }
 
-void test_write(void) { 
+void test_write(void) {
 	int fd, bufsiz, result;
 
     bufsiz = strlen(teststr) + 1;
 	printf("write: Not a test........");
 	fd = open("fs_errno.txt", O_WRONLY);
-    result = write(fd, teststr, bufsiz); 
+    result = write(fd, teststr, bufsiz);
     if (result == -1) {
         printf("   failed %d write file\n", errno);
     } else if (fd != 3) {
@@ -143,18 +143,18 @@ void test_write(void) {
     }
 
 	printf("write: EBADF test........");
-    result = write(-1, teststr, bufsiz); 
+    result = write(-1, teststr, bufsiz);
     check_test(result, EBADF);
 
 	printf("write: EBADF test........");
-    result = write(4, teststr, bufsiz); 
+    result = write(4, teststr, bufsiz);
     check_test(result, EBADF);
 
     void *broken = NULL;
 	printf("write: EFAULT test.......");
-    result = write(3, broken, bufsiz); 
+    result = write(3, broken, bufsiz);
     check_test(result, EFAULT);
-    
+
     close(fd);
 
     fd = open("fs_errno.txt", O_RDONLY);
@@ -170,12 +170,12 @@ void test_read(void) {
     strsiz = strlen(teststr) + 1;
 	printf("read: Not a test.........");
 	fd = open("fs_errno.txt", O_RDWR);
-    result = read(fd, buf, strsiz); 
+    result = read(fd, buf, strsiz);
     if (result == -1) {
         printf("   failed %d read file\n", errno);
     } else if (fd != 3) {
         printf("   failed fd = %d, expect 3\n", fd);
-    } else if (result != strsiz) { 
+    } else if (result != strsiz) {
         printf("   read size %d mismatch %d\n", result, strsiz);
     } else if (strcmp(buf, teststr) != 0) {
         printf("   read content mismatch\n");
@@ -186,16 +186,16 @@ void test_read(void) {
 
 	fd = open("fs_errno.txt", O_RDONLY);
 	printf("read: EBADF test.........");
-    result = read(-1, buf, 10); 
+    result = read(-1, buf, 10);
     check_test(result, EBADF);
 
 	printf("read: EBADF test.........");
-    result = read(4, buf, 10); 
+    result = read(4, buf, 10);
     check_test(result, EBADF);
 
     void *broken = NULL;
 	printf("read: EFAULT test........");
-    result = read(3, broken, 10); 
+    result = read(3, broken, 10);
     check_test(result, EFAULT);
     close(fd);
 
@@ -213,12 +213,12 @@ void test_lseek(void) {
 	printf("lseek: Not a test........");
 	fd = open("fs_errno.txt", O_RDWR);
     result = lseek(fd, -10, SEEK_END);
-    read(fd, buf, bufsiz); 
+    read(fd, buf, bufsiz);
     if (result == -1) {
         printf("   failed %d seek file\n", errno);
     } else if (fd != 3) {
         printf("   failed fd = %d, expect 3\n", fd);
-    } else if (result != 79) { 
+    } else if (result != 79) {
         printf("   seek size %d mismatch %d\n", result, 79);
     } else if (strcmp(buf, "e program") != 0) {
         printf("   seek content mismatch\n");
@@ -226,33 +226,33 @@ void test_lseek(void) {
         printf("   SUCCESS!\n");
     }
     close(fd);
-    
+
     fd = open("fs_errno.txt", O_RDONLY);
-    console = open("con:", O_RDWR); 
+    console = open("con:", O_RDWR);
 
 	printf("lseek: EBADF test........");
-    result = lseek(-1, 10, SEEK_SET); 
+    result = lseek(-1, 10, SEEK_SET);
     check_test(result, EBADF);
 
 	printf("lseek: ESPIPE tes........");
-    result = lseek(console, 10, SEEK_SET); 
+    result = lseek(console, 10, SEEK_SET);
     check_test(result, ESPIPE);
 
 	printf("lseek: EINVAL test.......");
-    result = lseek(fd, 10, 4); 
+    result = lseek(fd, 10, 4);
     check_test(result, EINVAL);
 
 	printf("lseek: EINVAL test.......");
-    lseek(fd, 45, SEEK_SET); 
-    result = lseek(fd, -46, SEEK_CUR); 
+    lseek(fd, 45, SEEK_SET);
+    result = lseek(fd, -46, SEEK_CUR);
     check_test(result, EINVAL);
 
 	printf("lseek: EINVAL test.......");
-    result = lseek(fd, -bufsiz-1, SEEK_END); 
+    result = lseek(fd, -bufsiz-1, SEEK_END);
     check_test(result, EINVAL);
 
     printf("lseek: EOF test..........");
-    result = lseek(fd, 1, SEEK_END); 
+    result = lseek(fd, 1, SEEK_END);
     if (result == -1) {
         printf("   FAILURE!\n");
     } else {
